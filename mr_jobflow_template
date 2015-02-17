@@ -1,0 +1,81 @@
+#!/bin/bash
+#------------------------------------------------------------------------------
+# Job Script Template for multi run + job flow (mr_jobflow_template).
+# Automatically submits next dependent job.  TACC Stampede 2014/02/15 Kent
+# $Id$
+#------------------------------------------------------------------------------
+#SBATCH -J run#start#
+#SBATCH -o run#start#.%j.out
+#SBATCH -p normal
+#SBATCH -n 8
+#SBATCH -t 00:05:00
+########-A <my_project_name>
+set -x
+
+# Template for automatic dependent job submission, 
+# with nruns executions in each job.
+#
+#    Use this script as a test, before you modify. Just:
+# Create job_0 by replacing #start# with 0.
+# Submit as "sbatch job_0".
+
+# Runs are numbered from 0 to nruns-1 (loop generates background processes).
+
+# cat and if below create a dependent job (from this template) for the 
+# next set of runs: run numbers (rn)  nruns to 2*nruns -1, 
+# followed by 2*nruns to 3*nruns-1, in the next job etc.
+
+# Present setup: 
+#                         Submission Directory                   SUB_DIR
+#             ____________________|_________________________ ...
+# execution  |     |     |     |     |     |     |     |
+# dir        DIR_0 DIR_1 DIR_2 DIR_3 DIR_4 DIR_5 DIR_6 DIR_7 ... EXEC_DIR_$rn
+#
+#            <---------job_0------>| |<---------job_1------> ... job_$next_start
+#  tasks/run   2     2     2     2      2     2     2     2      tasks_per_run
+#  runs/job             8                        8               nruns
+#  job dependency      job_0       <--          job_1
+#
+#  Remove lines with "4 TESTING" comment for production jobs.
+#  (Assumes you will have generated your own directories with inputs.)
+
+# Submission dir    executions   tasks/run    last run    execution dir
+#                    (runs)
+  SUB_DIR=`pwd`;     nruns=4;    ntasks=2;    final=7;     EXE_DIR=DIR
+ 
+                    #start = first run number in this set of runs
+ start=#start#
+                    #next_start = the first run number for the next job
+ next_start=$(( start + nruns ))
+                    #end = the last run number in this set of runs
+ end=$(( next_start - 1 ))
+
+           # If next set starts with higher value than final, don't submit.
+           # Create next job script (job_#), substitute #start# with next_start number
+           # \# evaluates to #, and is protected from substitution.
+           # Uh, must submit to "login#" @tacc; Make job_# dependent on this job's id 
+           # (submit from directory where first job submitted ($SUB_DIR).
+
+ if [ $next_start -lt $final ]; then     #avoid run-away!
+    cat mr_jobflow_template | sed s'/#start\#/'$next_start'/' >job_$next_start
+    ssh login1.stampede.tacc.utexas.edu "cd $SUB_DIR; sbatch -d afterok:$SLURM_JOBID job_$next_start"
+ fi
+
+                               # Loop over background jobs
+                               # cd to execution directory ($EXE_DIR_$rn), 
+                               # run cmd in background, cd out of dir.
+                               # rn=run number, off=task offset, ntasks=tasks per run
+for rn in `seq $start $end` ; do  
+   
+   if [ ! -d ${EXE_DIR}_$rn ]; then mkdir ${EXE_DIR}_$rn; fi   # 4 TESTING
+   cd ${EXE_DIR}_$rn
+   off=$(( rn - $start ))
+   echo "ibrun -n $ntasks -o $(( ntasks * off)) my_cmd > out_$rn &" >run_cmd_$rn  &  # 4 TESTING
+        #ibrun -n $ntasks -o $(( ntasks * off)) my_cmd > out_$rn &  #<<< This is your command
+   cd ..
+
+done
+
+wait       #IMPORTANT, do not remove!!!!
+
+sleep 45   #4 TESTING
