@@ -10,7 +10,7 @@
 #SBATCH -n 8
 #SBATCH -t 00:05:00
 ########-A <my_project_name>
-set -x
+#set -x   #uncomment to see execution statements of script
 
 # Template for automatic dependent job submission, 
 # with nruns executions in each job.
@@ -42,6 +42,9 @@ set -x
 # Submission dir    executions   tasks/run    last run    execution dir
 #                    (runs)
   SUB_DIR=`pwd`;     nruns=4;    ntasks=2;    final=7;     EXE_DIR=DIR
+
+#(final+1 must equal N*nruns, run numbers begin with 0)
+
  
                     #start = first run number in this set of runs
  start=#start#
