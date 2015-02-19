@@ -1,7 +1,7 @@
 #!/bin/bash
 #------------------------------------------------------------------------------
 # SLURM template for multi run + job flow (mr_jobflow_template).
-#                                                 TACC Stampede 2014/19/15 Kent
+# Version 2.0                                     TACC Stampede 2014/19/15 Kent
 #------------------------------------------------------------------------------
 #SBATCH -J run#start#
 #SBATCH -o run#start#.%j.out
